@@ -54,42 +54,23 @@
     loader.load(
       './DamagedHelmet.glb',  // Шлях до моделі відносно index.html
       function (gltf) {
-        console.log('Model loaded');
+        console.log('Model loaded successfully');
         model = gltf.scene;
         model.scale.set(1, 1, 1);
         model.position.set(0, 0, -1); // перед камерою
         scene.add(model);
       },
       function (xhr) {
-        console.log(`Model loading: ${(xhr.loaded / xhr.total) * 100}%`);
+        if (xhr.lengthComputable) {
+          console.log(`Model loading: ${((xhr.loaded / xhr.total) * 100).toFixed(2)}%`);
+        }
       },
       function (error) {
         console.error('Error loading model:', error);
       }
     );
 
-    // Перевірка підтримки WebXR
-    if (navigator.xr) {
-      navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-        console.log('AR supported:', supported);
-        if (supported) {
-          document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
-          renderer.setAnimationLoop(() => {
-            renderer.render(scene, camera);
-          });
-        } else {
-          launchNonARMode();
-        }
-      }).catch((err) => {
-        console.error('XR check failed:', err);
-        launchNonARMode();
-      });
-    } else {
-      console.log('WebXR not supported');
-      launchNonARMode();
-    }
-
-    // Звичайний режим без AR
+    // Запускаємо рендеринг у звичайному (не AR) режимі
     function launchNonARMode() {
       console.log('Launching non-AR mode');
       renderer.xr.enabled = false;
@@ -100,6 +81,28 @@
       }
 
       animate();
+    }
+
+    // Перевірка підтримки WebXR і запуск AR або звичайного режиму
+    if (navigator.xr) {
+      navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+        console.log('AR supported:', supported);
+        if (supported) {
+          document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
+          renderer.setAnimationLoop(() => {
+            renderer.render(scene, camera);
+          });
+        } else {
+          console.log('AR not supported, fallback to non-AR mode');
+          launchNonARMode();
+        }
+      }).catch((err) => {
+        console.error('XR check failed:', err);
+        launchNonARMode();
+      });
+    } else {
+      console.log('WebXR not supported');
+      launchNonARMode();
     }
 
     window.addEventListener('resize', () => {
