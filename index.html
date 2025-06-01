@@ -1,127 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>3D Scene with Optional AR</title>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js"></script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/GLTFLoader.js"></script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/webxr/ARButton.js"></script>
-    <style>
-      body {
-        margin: 0;
-        overflow: hidden;
+<head>
+  <meta charset="UTF-8" />
+  <title>3D Scene with Optional AR</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+
+    #enter-ar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+  <script type="module">
+    console.log('Script started');
+
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js';
+    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/GLTFLoader.js';
+    import { ARButton } from 'https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/webxr/ARButton.js';
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xeeeeee);
+
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
+    camera.position.set(0, 1, 3);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(2, 2, 5);
+    scene.add(directionalLight);
+
+    const loader = new GLTFLoader();
+    let model = null;
+
+    loader.load(
+      './DamagedHelmet.glb',  // Шлях до моделі відносно index.html
+      function (gltf) {
+        console.log('Model loaded');
+        model = gltf.scene;
+        model.scale.set(1, 1, 1);
+        model.position.set(0, 0, -1); // перед камерою
+        scene.add(model);
+      },
+      function (xhr) {
+        console.log(`Model loading: ${(xhr.loaded / xhr.total) * 100}%`);
+      },
+      function (error) {
+        console.error('Error loading model:', error);
       }
+    );
 
-      #enter-ar {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        z-index: 1;
-      }
-    </style>
-  </head>
-  <body>
-    <script type="module">
-      import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js';
-      import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/GLTFLoader.js';
-      import { ARButton } from 'https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/webxr/ARButton.js';
-
-      const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xeeeeee);
-
-      const camera = new THREE.PerspectiveCamera(
-        75,
-        window.innerWidth / window.innerHeight,
-        0.1,
-        1000
-      );
-      camera.position.set(0, 1, 3);
-
-      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.xr.enabled = true;
-      document.body.appendChild(renderer.domElement);
-
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-      scene.add(ambientLight);
-
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-      directionalLight.position.set(2, 2, 5);
-      scene.add(directionalLight);
-
-      const loader = new GLTFLoader();
-      let model = null;
-
-      function loadModel(url, isFallback = false) {
-        console.log(`🔄 Завантаження моделі з: ${url}`);
-        loader.load(
-          url,
-          function (gltf) {
-            console.log("✅ Модель успішно завантажена!");
-            model = gltf.scene;
-            model.scale.set(1, 1, 1);
-            model.position.set(0, 0, -1);
-            scene.add(model);
-          },
-          undefined,
-          function (error) {
-            console.error('❌ Помилка завантаження моделі:', error);
-
-            if (!isFallback) {
-              console.log("🔁 Спроба завантажити модель з резервного джерела (CDN)...");
-              loadModel('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb', true);
-            }
-          }
-        );
-      }
-
-      // Спроба завантажити локальну модель
-      loadModel('DamagedHelmet.glb');
-
-      // Перевірка підтримки WebXR
-      if (navigator.xr) {
-        navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-          if (supported) {
-            document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
-            console.log("🟢 Підтримка AR увімкнена.");
-          } else {
-            console.warn("🔇 AR не підтримується. Запуск звичайного режиму.");
-            launchNonARMode();
-          }
-        });
-      } else {
-        console.warn("❗ WebXR не підтримується. Запуск звичайного режиму.");
-        launchNonARMode();
-      }
-
-      // Звичайний режим без AR
-      function launchNonARMode() {
-        renderer.xr.enabled = false;
-
-        function animate() {
-          requestAnimationFrame(animate);
-          renderer.render(scene, camera);
+    // Перевірка підтримки WebXR
+    if (navigator.xr) {
+      navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+        console.log('AR supported:', supported);
+        if (supported) {
+          document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
+          renderer.setAnimationLoop(() => {
+            renderer.render(scene, camera);
+          });
+        } else {
+          launchNonARMode();
         }
+      }).catch((err) => {
+        console.error('XR check failed:', err);
+        launchNonARMode();
+      });
+    } else {
+      console.log('WebXR not supported');
+      launchNonARMode();
+    }
 
-        animate();
-      }
+    // Звичайний режим без AR
+    function launchNonARMode() {
+      console.log('Launching non-AR mode');
+      renderer.xr.enabled = false;
 
-      // Якщо AR активний
-      function renderAR() {
-        renderer.setAnimationLoop(() => {
-          renderer.render(scene, camera);
-        });
-      }
-
-      renderer.setAnimationLoop(() => {
+      function animate() {
+        requestAnimationFrame(animate);
         renderer.render(scene, camera);
-      });
+      }
 
-      window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      });
-    </script>
-  </body>
+      animate();
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
 </html>
